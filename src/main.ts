@@ -55,32 +55,75 @@ const testGrab = () => {
 }
 
 const testSwipe = () => {
-  const SWIPE_MAX_TIME = 2;
-  
-  let start: number | undefined;
-  let lastPos = k.vec2();
-  let direction = k.vec2();
+  const SWIPE_MAX_TIME = 1;
 
-  const getCurrentTime = () => {
-    return (new Date()).getTime()
+  interface Swipe {
+    start: Vec2;
+    end: Vec2;
+    direction: Vec2;
+    duration: number;
+    time: {
+      start: number;
+      end: number;
+    }
   }
 
+  const swipes: Record<number, Swipe> = {};
+
   game.onTouchStart((pos, touch) => {
-    console.log(touch.identifier);
-    start = getCurrentTime()
+    swipes[touch.identifier] = {
+      start: pos,
+      end: pos,
+      direction: k.vec2(),
+      duration: 0,
+      time: {
+        start: k.time(),
+        end: k.time()
+      }
+    }
   });
 
   game.onTouchMove((pos, touch) => {
-    direction = k.Vec2.fromAngle(lastPos.angle(pos));
-    lastPos = pos;
+    const swipe = swipes[touch.identifier];
+    swipe.direction = k.Vec2.fromAngle(swipe.end.angle(pos));
+    swipe.end = pos;
   });
 
   game.onTouchEnd((pos, touch) => {
-    const currentTime = getCurrentTime();
-    const timeDiff = (currentTime - start) / 1000;
-    if (timeDiff <= SWIPE_MAX_TIME) {
-      console.log(`Swiped to ${direction.toString()}`);
+    const swipe = swipes[touch.identifier];
+    swipe.time.end = k.time();
+    const diff = swipe.time.end - swipe.time.start;
+    console.log({ diff });
+    
+    if (diff > SWIPE_MAX_TIME) {
+      return;
     }
+
+    k.debug.log(`Swiped ${touch.identifier} to ${swipe.direction.toString()}`);
+    console.log(`Swiped ${touch.identifier} to ${swipe.direction} ${swipe.direction.angle(k.vec2())}º`);
+
+    // TODO: swipe callback??
+
+    const slash = game.add([
+      k.lifespan(1),
+      k.color(k.RED),
+      k.rect(100, 10),
+      k.anchor("left"),
+      k.pos(swipe.end),
+      k.rotate(swipe.direction.angle(k.vec2())),
+    ]);
+    const tip = game.add([
+      k.lifespan(1),
+      k.color(k.BLUE),
+      k.circle(16),
+      k.pos(swipe.end)
+    ]);
+    const tipStart = game.add([
+      k.lifespan(1),
+      k.color(k.BLUE),
+      k.circle(16),
+      k.pos(swipe.start)
+    ]);
   });
 }
 
