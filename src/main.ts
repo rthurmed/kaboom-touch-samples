@@ -19,16 +19,35 @@ const testGrab = () => {
   const entity = game.add([
     "grabbable",
     k.sprite("bean"),
-    k.scale(2, 2),
     k.pos(k.center()),
-    k.area(),
+    k.scale(2),
+    k.z(10),
     k.anchor("center"),
+    k.area(),
     {
       target: k.vec2(k.center()),
       grabbed: false,
       speed: 10
     }
   ]);
+
+  const slotPositions = [
+    k.center().add(0, -300),
+    k.center().add((128 + 64) * -1, -300),
+    k.center().add((128 + 64), -300),
+  ]
+
+  for (let i = 0; i < slotPositions.length; i++) {
+    const slotPosition = slotPositions[i];
+    game.add([
+      "slot",
+      k.rect(64, 64),
+      k.pos(slotPosition),
+      k.scale(2),
+      k.anchor("center"),
+      k.area()
+    ]);
+  }
   
   game.onTouchStart((pos, touch) => {
     if (entity.hasPoint(pos)) {
@@ -43,9 +62,24 @@ const testGrab = () => {
   });
   
   game.onTouchEnd((pos, touch) => {
-    if (entity.grabbed) {
-      entity.grabbed = false;
-      entity.target = pos;
+    if (!entity.grabbed) {
+      return
+    }
+
+    entity.grabbed = false;
+    entity.target = pos;
+
+    const collisions = entity.getCollisions();
+    if (collisions.length < 1) {
+      return;
+    }
+
+    for (let i = 0; i < collisions.length; i++) {
+      const collision = collisions[i];
+      if (collision.target.is("slot")) {
+        entity.target = collision.target.pos;
+        return;
+      }
     }
   });
   
@@ -150,8 +184,8 @@ const testSwipeParticles = () => {
 
 const main = () => {
   testGrab();
-  testSwipe();
-  testSwipeParticles();
+  // testSwipe();
+  // testSwipeParticles();
 }
 
 main();
