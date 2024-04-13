@@ -67,8 +67,8 @@ k.scene("grabbing", () => {
     k.anchor("center"),
     k.area(),
     {
-      target: k.vec2(k.center()),
       grabbed: false,
+      target: k.vec2(k.center()),
       speed: 10
     }
   ]);
@@ -141,15 +141,6 @@ k.scene("grabbing", () => {
 });
 
 k.scene("swipe-directional", () => {
-  const SWIPE_MAX_TIME = 1;
-  const SWIPE_DEADZONE = 0.3;
-
-  const game = k.add([
-    k.timer()
-  ]);
-
-  addNavMenu(game, "swipe-directional");
-
   interface Swipe {
     start: Vec2;
     end: Vec2;
@@ -165,82 +156,123 @@ k.scene("swipe-directional", () => {
     isRight: boolean;
   }
 
-  const swipes: Record<number, Swipe> = {};
+  interface SwipeControllerConfig {
+    maxTime: number,
+    deadzone: number
+  }
 
-  game.onTouchStart((pos, touch) => {
-    swipes[touch.identifier] = {
-      start: pos,
-      end: pos,
-      direction: k.vec2(),
-      duration: 0,
-      time: {
-        start: k.time(),
-        end: k.time()
-      },
-      isUp: false,
-      isDown: false,
-      isLeft: false,
-      isRight: false
+  const onSwipe = (game: GameObj<TimerComp>, callback: (swipe: Swipe) => void, config: SwipeControllerConfig = {
+    maxTime: 1,
+    deadzone: .3
+  }) => {
+    const swipes: Record<number, Swipe> = {};
+
+    game.onTouchStart((pos, touch) => {
+      swipes[touch.identifier] = {
+        start: pos,
+        end: pos,
+        direction: k.vec2(),
+        duration: 0,
+        time: {
+          start: k.time(),
+          end: k.time()
+        },
+        isUp: false,
+        isDown: false,
+        isLeft: false,
+        isRight: false
+      }
+    });
+
+    game.onTouchMove((pos, touch) => {
+      const swipe = swipes[touch.identifier];
+      if (swipe === undefined) {
+        return;
+      }
+      swipe.direction = k.Vec2.fromAngle(pos.angle(swipe.end));
+      swipe.end = pos;
+    });
+
+    game.onTouchEnd((pos, touch) => {
+      const swipe = swipes[touch.identifier];
+      if (swipe === undefined) {
+        return;
+      }
+      swipe.time.end = k.time();
+      const diff = swipe.time.end - swipe.time.start;
+      
+      if (diff > config.maxTime) {
+        return;
+      }
+
+      swipe.isUp = swipe.direction.y < config.deadzone * -1;
+      swipe.isDown = swipe.direction.y > config.deadzone;
+      swipe.isLeft = swipe.direction.x < config.deadzone * -1;
+      swipe.isRight = swipe.direction.x > config.deadzone;
+
+      callback(swipe);
+
+      if (!k.debug.inspect) {
+        return;
+      }
+
+      const slash = game.add([
+        k.lifespan(1),
+        k.color(k.RED),
+        k.rect(100, 10),
+        k.anchor("left"),
+        k.pos(swipe.end),
+        k.rotate(swipe.direction.angle(k.vec2())),
+      ]);
+      const tip = game.add([
+        k.lifespan(1),
+        k.color(k.BLUE),
+        k.circle(16),
+        k.pos(swipe.end)
+      ]);
+      const start = game.add([
+        k.lifespan(1),
+        k.color(k.BLUE),
+        k.circle(16),
+        k.pos(swipe.start)
+      ]);
+    });
+  }
+
+  const game = k.add([
+    k.timer()
+  ]);
+
+  addNavMenu(game, "swipe-directional");
+
+  const entity = game.add([
+    k.sprite("bean"),
+    k.pos(k.center()),
+    k.scale(2),
+    k.z(10),
+    k.anchor("center"),
+    k.area(),
+    {
+      target: k.vec2(k.center()),
+      speed: 10
+    }
+  ]);
+
+  onSwipe(game, (swipe: Swipe) => {
+    const ENTITY_MOVEMENT = 128;
+    if (swipe.isLeft) {
+      entity.target = entity.pos.add(k.LEFT.scale(ENTITY_MOVEMENT));
+    }
+    if (swipe.isRight) {
+      entity.target = entity.pos.add(k.RIGHT.scale(ENTITY_MOVEMENT));
+    }
+    if (swipe.isDown) {
+      k.shake(10);
     }
   });
 
-  game.onTouchMove((pos, touch) => {
-    const swipe = swipes[touch.identifier];
-    if (swipe === undefined) {
-      return;
-    }
-    swipe.direction = k.Vec2.fromAngle(pos.angle(swipe.end));
-    swipe.end = pos;
-  });
-
-  game.onTouchEnd((pos, touch) => {
-    const swipe = swipes[touch.identifier];
-    if (swipe === undefined) {
-      return;
-    }
-    swipe.time.end = k.time();
-    const diff = swipe.time.end - swipe.time.start;
-    
-    if (diff > SWIPE_MAX_TIME) {
-      return;
-    }
-
-    swipe.isUp = swipe.direction.y < SWIPE_DEADZONE * -1;
-    swipe.isDown = swipe.direction.y > SWIPE_DEADZONE;
-    swipe.isLeft = swipe.direction.x < SWIPE_DEADZONE * -1;
-    swipe.isRight = swipe.direction.x > SWIPE_DEADZONE;
-
-    // k.debug.log(`Swiped ${touch.identifier} to ${swipe.direction.toString()}`);
-    // console.log(`Swiped ${touch.identifier} to ${swipe.direction.toString()}`, swipe);
-    // const { isUp, isDown, isLeft, isRight } = swipe;
-    // console.log({ isUp, isDown, isLeft, isRight });
-
-    // TODO: swipe callback??
-
-    if (!k.debug.inspect) {
-      return;
-    }
-
-    const slash = game.add([
-      k.lifespan(1),
-      k.color(k.RED),
-      k.rect(100, 10),
-      k.anchor("left"),
-      k.pos(swipe.end),
-      k.rotate(swipe.direction.angle(k.vec2())),
-    ]);
-    const tip = game.add([
-      k.lifespan(1),
-      k.color(k.BLUE),
-      k.circle(16),
-      k.pos(swipe.end)
-    ]);
-    const start = game.add([
-      k.lifespan(1),
-      k.color(k.BLUE),
-      k.circle(16),
-      k.pos(swipe.start)
-    ]);
+  game.onUpdate(() => {
+    entity.pos = k.lerp(entity.pos, entity.target, entity.speed * k.dt());
   });
 });
 
