@@ -1,5 +1,6 @@
 import kaboom, { GameObj, TimerComp, Vec2 } from "kaboom";
 import { onSwipe } from "./swipe";
+import { grabbable, slot } from "./grab";
 
 const k = kaboom({
   canvas: document.getElementById('canvas') as HTMLCanvasElement,
@@ -59,21 +60,6 @@ k.scene("grabbing", () => {
 
   addNavMenu(game, "grabbing");
 
-  const entity = game.add([
-    "grabbable",
-    k.sprite("bean"),
-    k.pos(k.center()),
-    k.scale(2),
-    k.z(10),
-    k.anchor("center"),
-    k.area(),
-    {
-      grabbed: false,
-      target: k.vec2(k.center()),
-      speed: 10
-    }
-  ]);
-
   const slotPositions = [
     k.center().add(0, -300),
     k.center().add((128 + 64) * -1, -300),
@@ -83,62 +69,25 @@ k.scene("grabbing", () => {
   for (let i = 0; i < slotPositions.length; i++) {
     const slotPosition = slotPositions[i];
     game.add([
-      "slot",
       k.rect(80, 80),
       k.pos(slotPosition),
       k.outline(4, k.BLACK),
       k.scale(2),
       k.anchor("center"),
-      k.area()
+      k.area(),
+      slot(k, game)
     ]);
   }
-  
-  game.onTouchStart((pos, touch) => {
-    if (entity.hasPoint(pos)) {
-      entity.grabbed = true;
-    }
-  });
-  
-  game.onTouchMove((pos, touch) => {
-    if (entity.grabbed) {
-      entity.target = pos;
-    }
-  });
-  
-  game.onTouchEnd((pos, touch) => {
-    if (!entity.grabbed) {
-      return
-    }
 
-    entity.grabbed = false;
-    entity.target = pos;
-
-    const collisions = entity.getCollisions();
-    if (collisions.length < 1) {
-      return;
-    }
-
-    let closest: Vec2;
-    let closestDistance = 1_000_000_000;
-
-    for (let i = 0; i < collisions.length; i++) {
-      const collision = collisions[i];
-      if (!collision.target.is("slot")) {
-        continue;
-      }
-      const distance = collision.source.pos.dist(collision.target.pos);
-      if (distance < closestDistance) {
-        closest = collision.target.pos;
-        closestDistance = distance;
-      }
-    }
-
-    entity.target = closest;
-  });
-  
-  game.onUpdate(() => {
-    entity.pos = k.lerp(entity.pos, entity.target, entity.speed * k.dt());
-  });
+  const entity = game.add([
+    k.sprite("bean"),
+    k.pos(k.center()),
+    k.scale(2),
+    k.z(10),
+    k.anchor("center"),
+    k.area(),
+    grabbable(k, game)
+  ]);
 });
 
 k.scene("swipe-directional", () => {
@@ -203,4 +152,4 @@ k.scene("swipe-particles", () => {
   });
 });
 
-k.go("swipe-directional");
+k.go("grabbing");
