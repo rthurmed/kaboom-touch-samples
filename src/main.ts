@@ -1,4 +1,4 @@
-import kaboom, { Vec2 } from "kaboom";
+import kaboom, { GameObj, TimerComp, Vec2 } from "kaboom";
 
 const k = kaboom({
   canvas: document.getElementById('canvas') as HTMLCanvasElement,
@@ -11,11 +11,53 @@ k.debug.inspect = true;
 
 k.loadSprite("bean", "./sprites/bean.png");
 
-const game = k.add([
-  k.timer()
-]);
+const addNavMenu = (game: GameObj<TimerComp>, currentScene: string) => {
+  const SIZE = 64;
 
-const testGrab = () => {
+  game.add([
+    k.text("1. grabbing", {
+      size: SIZE
+    }),
+    k.pos(0, k.height() - SIZE * 2),
+    k.area(),
+    k.anchor("botleft"),
+    k.color(currentScene === "grabbing" ? k.RED : k.WHITE)
+  ]).onClick(() => {
+    k.go("grabbing")
+  });
+
+  game.add([
+    k.text("2. swipe directional", {
+      size: SIZE
+    }),
+    k.pos(0, k.height() - SIZE),
+    k.area(),
+    k.anchor("botleft"),
+    k.color(currentScene === "swipe-directional" ? k.RED : k.WHITE)
+  ]).onClick(() => {
+    k.go("swipe-directional")
+  });
+
+  game.add([
+    k.text("3. swipe particles", {
+      size: SIZE
+    }),
+    k.pos(0, k.height()),
+    k.area(),
+    k.anchor("botleft"),
+    k.color(currentScene === "swipe-particles" ? k.RED : k.WHITE)
+  ]).onClick(() => {
+    k.go("swipe-particles")
+  });
+}
+
+k.scene("grabbing", () => {
+  const game = k.add([
+    k.timer()
+  ]);
+
+  addNavMenu(game, "grabbing");
+
   const entity = game.add([
     "grabbable",
     k.sprite("bean"),
@@ -96,10 +138,16 @@ const testGrab = () => {
   game.onUpdate(() => {
     entity.pos = k.lerp(entity.pos, entity.target, entity.speed * k.dt());
   });
-}
+});
 
-const testSwipe = () => {
+k.scene("swipe-directional", () => {
   const SWIPE_MAX_TIME = 1;
+
+  const game = k.add([
+    k.timer()
+  ]);
+
+  addNavMenu(game, "swipe-directional");
 
   interface Swipe {
     start: Vec2;
@@ -129,12 +177,18 @@ const testSwipe = () => {
 
   game.onTouchMove((pos, touch) => {
     const swipe = swipes[touch.identifier];
+    if (swipe === undefined) {
+      return;
+    }
     swipe.direction = k.Vec2.fromAngle(swipe.end.angle(pos));
     swipe.end = pos;
   });
 
   game.onTouchEnd((pos, touch) => {
     const swipe = swipes[touch.identifier];
+    if (swipe === undefined) {
+      return;
+    }
     swipe.time.end = k.time();
     const diff = swipe.time.end - swipe.time.start;
     
@@ -172,9 +226,15 @@ const testSwipe = () => {
       k.pos(swipe.start)
     ]);
   });
-}
+});
 
-const testSwipeParticles = () => {
+k.scene("swipe-particles", () => {
+  const game = k.add([
+    k.timer()
+  ]);
+
+  addNavMenu(game, "swipe-particles");
+
   game.onTouchMove((pos, touch) => {
     const marker = game.add([
       k.circle(32),
@@ -190,12 +250,6 @@ const testSwipeParticles = () => {
       marker.scale = marker.scale.scale(.9);
     });
   });
-}
+});
 
-const main = () => {
-  testGrab();
-  // testSwipe();
-  // testSwipeParticles();
-}
-
-main();
+k.go("grabbing");
