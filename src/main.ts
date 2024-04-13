@@ -93,16 +93,19 @@ const testSwipe = () => {
     const swipe = swipes[touch.identifier];
     swipe.time.end = k.time();
     const diff = swipe.time.end - swipe.time.start;
-    console.log({ diff });
     
     if (diff > SWIPE_MAX_TIME) {
       return;
     }
 
-    k.debug.log(`Swiped ${touch.identifier} to ${swipe.direction.toString()}`);
-    console.log(`Swiped ${touch.identifier} to ${swipe.direction} ${swipe.direction.angle(k.vec2())}º`);
+    // k.debug.log(`Swiped ${touch.identifier} to ${swipe.direction.toString()}`);
+    // console.log(`Swiped ${touch.identifier} to ${swipe.direction} ${swipe.direction.angle(k.vec2())}º`);
 
     // TODO: swipe callback??
+
+    if (!k.debug.inspect) {
+      return;
+    }
 
     const slash = game.add([
       k.lifespan(1),
@@ -118,7 +121,7 @@ const testSwipe = () => {
       k.circle(16),
       k.pos(swipe.end)
     ]);
-    const tipStart = game.add([
+    const start = game.add([
       k.lifespan(1),
       k.color(k.BLUE),
       k.circle(16),
@@ -127,9 +130,28 @@ const testSwipe = () => {
   });
 }
 
+const testSwipeParticles = () => {
+  game.onTouchMove((pos, touch) => {
+    const marker = game.add([
+      k.circle(32),
+      k.pos(pos),
+      k.scale(),
+      k.lifespan(.5),
+      k.area({
+        shape: new k.Rect(k.vec2(), 96, 96)
+      }),
+      k.anchor("center")
+    ]);
+    marker.onUpdate(() => {
+      marker.scale = marker.scale.scale(.9);
+    });
+  });
+}
+
 const main = () => {
   testGrab();
   testSwipe();
+  testSwipeParticles();
 }
 
 main();
