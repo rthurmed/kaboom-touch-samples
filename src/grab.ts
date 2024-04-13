@@ -36,7 +36,7 @@ export const grabbable = (k: KaboomCtx, game: GameObj<TimerComp>): Comp => {
           return;
         }
     
-        let closest: Vec2;
+        let closest: Vec2 = undefined;
         let closestDistance = 1_000_000_000;
     
         for (let i = 0; i < collisions.length; i++) {
@@ -50,8 +50,10 @@ export const grabbable = (k: KaboomCtx, game: GameObj<TimerComp>): Comp => {
             closestDistance = distance;
           }
         }
-    
-        target = closest;
+
+        if (closest !== undefined) {
+          target = closest;
+        }
       });
       
       game.onUpdate(() => {
