@@ -295,7 +295,7 @@ k.scene("swipe-particles", () => {
       k.anchor("center")
     ]);
     marker.onUpdate(() => {
-      marker.scale = marker.scale.scale(.9);
+      marker.scale = marker.scale.scale(1 - k.dt() * 4);
     });
   });
 });
