@@ -118,7 +118,7 @@ k.scene("grabbing", () => {
     }
 
     let closest: Vec2;
-    let closestDistance = 1_000_000_000;  
+    let closestDistance = 1_000_000_000;
 
     for (let i = 0; i < collisions.length; i++) {
       const collision = collisions[i];
@@ -142,6 +142,7 @@ k.scene("grabbing", () => {
 
 k.scene("swipe-directional", () => {
   const SWIPE_MAX_TIME = 1;
+  const SWIPE_DEADZONE = 0.3;
 
   const game = k.add([
     k.timer()
@@ -157,7 +158,11 @@ k.scene("swipe-directional", () => {
     time: {
       start: number;
       end: number;
-    }
+    },
+    isUp: boolean;
+    isDown: boolean;
+    isLeft: boolean;
+    isRight: boolean;
   }
 
   const swipes: Record<number, Swipe> = {};
@@ -171,7 +176,11 @@ k.scene("swipe-directional", () => {
       time: {
         start: k.time(),
         end: k.time()
-      }
+      },
+      isUp: false,
+      isDown: false,
+      isLeft: false,
+      isRight: false
     }
   });
 
@@ -180,7 +189,7 @@ k.scene("swipe-directional", () => {
     if (swipe === undefined) {
       return;
     }
-    swipe.direction = k.Vec2.fromAngle(swipe.end.angle(pos));
+    swipe.direction = k.Vec2.fromAngle(pos.angle(swipe.end));
     swipe.end = pos;
   });
 
@@ -196,8 +205,15 @@ k.scene("swipe-directional", () => {
       return;
     }
 
+    swipe.isUp = swipe.direction.y < SWIPE_DEADZONE * -1;
+    swipe.isDown = swipe.direction.y > SWIPE_DEADZONE;
+    swipe.isLeft = swipe.direction.x < SWIPE_DEADZONE * -1;
+    swipe.isRight = swipe.direction.x > SWIPE_DEADZONE;
+
     // k.debug.log(`Swiped ${touch.identifier} to ${swipe.direction.toString()}`);
-    // console.log(`Swiped ${touch.identifier} to ${swipe.direction} ${swipe.direction.angle(k.vec2())}º`);
+    // console.log(`Swiped ${touch.identifier} to ${swipe.direction.toString()}`, swipe);
+    // const { isUp, isDown, isLeft, isRight } = swipe;
+    // console.log({ isUp, isDown, isLeft, isRight });
 
     // TODO: swipe callback??
 
@@ -252,4 +268,4 @@ k.scene("swipe-particles", () => {
   });
 });
 
-k.go("grabbing");
+k.go("swipe-directional");
