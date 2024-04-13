@@ -41,8 +41,9 @@ const testGrab = () => {
     const slotPosition = slotPositions[i];
     game.add([
       "slot",
-      k.rect(64, 64),
+      k.rect(80, 80),
       k.pos(slotPosition),
+      k.outline(4, k.BLACK),
       k.scale(2),
       k.anchor("center"),
       k.area()
@@ -74,13 +75,22 @@ const testGrab = () => {
       return;
     }
 
+    let closest: Vec2;
+    let closestDistance = 1_000_000_000;  
+
     for (let i = 0; i < collisions.length; i++) {
       const collision = collisions[i];
-      if (collision.target.is("slot")) {
-        entity.target = collision.target.pos;
-        return;
+      if (!collision.target.is("slot")) {
+        continue;
+      }
+      const distance = collision.source.pos.dist(collision.target.pos);
+      if (distance < closestDistance) {
+        closest = collision.target.pos;
+        closestDistance = distance;
       }
     }
+
+    entity.target = closest;
   });
   
   game.onUpdate(() => {
