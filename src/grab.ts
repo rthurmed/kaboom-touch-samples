@@ -1,7 +1,36 @@
 import { Comp, GameObj, KaboomCtx, TimerComp, Vec2 } from "kaboom";
 
-export const grabbable = (k: KaboomCtx, game: GameObj<TimerComp>): Comp => {
-  let grabbed = false;
+interface GrabbingManager {
+  grabbed?: GameObj;
+  grabbing: boolean;
+  grab(obj: GameObj): void;
+  release(): void;
+  isGrabbing(): boolean;
+  isGrabbingThat(obj: GameObj): boolean;
+}
+
+export const createGrabbingManager = (): GrabbingManager => {
+  return {
+    grabbed: undefined,
+    grabbing: false,
+    grab (obj: GameObj) {
+      this.grabbed = obj;
+      this.grabbing = true;
+    },
+    release () {
+      this.grabbed = undefined;
+      this.grabbing = false;
+    },
+    isGrabbing () {
+      return !this.grabbing;
+    },
+    isGrabbingThat (obj: GameObj) {
+      return this.grabbed !== undefined && obj.id === this.grabbed.id;
+    }
+  }
+}
+
+export const grabbable = (k: KaboomCtx, game: GameObj<TimerComp>, manager: GrabbingManager): Comp => {
   let target = k.vec2();
   let speed = 10;
 
@@ -12,23 +41,23 @@ export const grabbable = (k: KaboomCtx, game: GameObj<TimerComp>): Comp => {
       target = this.pos
 
       game.onTouchStart((pos, touch) => {
-        if (this.hasPoint(pos)) {
-          grabbed = true;
+        if (this.hasPoint(pos) && manager.isGrabbing()) {
+          manager.grab(this);
         }
       });
       
       game.onTouchMove((pos, touch) => {
-        if (grabbed) {
+        if (manager.isGrabbingThat(this)) {
           target = pos;
         }
       });
       
       game.onTouchEnd((pos, touch) => {
-        if (!grabbed) {
+        if (!manager.isGrabbingThat(this)) {
           return
         }
-    
-        grabbed = false;
+
+        manager.release();
         target = pos;
     
         const collisions = this.getCollisions();

@@ -1,6 +1,6 @@
 import kaboom, { GameObj, TimerComp, Vec2 } from "kaboom";
 import { onSwipe } from "./swipe";
-import { grabbable, slot } from "./grab";
+import { createGrabbingManager, grabbable, slot } from "./grab";
 
 const k = kaboom({
   canvas: document.getElementById('canvas') as HTMLCanvasElement,
@@ -79,6 +79,8 @@ k.scene("grabbing", () => {
     ]);
   }
 
+  const manager = createGrabbingManager();
+
   const entity = game.add([
     k.sprite("bean"),
     k.pos(k.center()),
@@ -86,7 +88,18 @@ k.scene("grabbing", () => {
     k.z(10),
     k.anchor("center"),
     k.area(),
-    grabbable(k, game)
+    grabbable(k, game, manager)
+  ]);
+
+  const entityRed = game.add([
+    k.sprite("bean"),
+    k.pos(k.center().add(k.vec2(160, 0))),
+    k.color(k.RED),
+    k.scale(2),
+    k.z(10),
+    k.anchor("center"),
+    k.area(),
+    grabbable(k, game, manager)
   ]);
 });
 
