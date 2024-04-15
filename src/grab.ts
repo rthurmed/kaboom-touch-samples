@@ -1,4 +1,4 @@
-import { Comp, GameObj, KaboomCtx, TimerComp, Vec2 } from "kaboom";
+import { AreaComp, Comp, GameObj, KaboomCtx, PosComp, TimerComp, Vec2 } from "kaboom";
 
 interface GrabbingManager {
   grabbed?: GameObj;
@@ -30,15 +30,26 @@ export const createGrabbingManager = (): GrabbingManager => {
   }
 }
 
-export const grabbable = (k: KaboomCtx, game: GameObj<TimerComp>, manager: GrabbingManager): Comp => {
-  let target = k.vec2();
+interface GrabbableComp extends Comp {
+  setTarget (value: Vec2 | undefined): void;
+}
+
+export const grabbable = (k: KaboomCtx, game: GameObj<TimerComp>, manager: GrabbingManager): GrabbableComp => {
+  let target: Vec2;
   let speed = 10;
+
+  function setTarget (value: Vec2 | undefined): void {
+    target = value;
+  }
 
   return {
     id: "grabbable",
     require: ["pos", "area"],
     add () {
-      target = this.pos
+      target = undefined;
+
+      this.use("grabbable");
+      this.setTarget = setTarget;
 
       game.onTouchStart((pos, touch) => {
         if (this.hasPoint(pos) && manager.isGrabbing()) {
@@ -49,6 +60,7 @@ export const grabbable = (k: KaboomCtx, game: GameObj<TimerComp>, manager: Grabb
       game.onTouchMove((pos, touch) => {
         if (manager.isGrabbingThat(this)) {
           target = pos;
+          this.collisionIgnore = ["slot"];
         }
       });
       
@@ -58,47 +70,51 @@ export const grabbable = (k: KaboomCtx, game: GameObj<TimerComp>, manager: Grabb
         }
 
         manager.release();
+        this.collisionIgnore = []
         target = pos;
-    
-        const collisions = this.getCollisions();
-        if (collisions.length < 1) {
+      });
+
+      game.onUpdate(() => {
+        if (target === undefined) {
           return;
         }
-    
-        let closest: Vec2 = undefined;
-        let closestDistance = 1_000_000_000;
-    
-        for (let i = 0; i < collisions.length; i++) {
-          const collision = collisions[i];
-          if (!collision.target.is("slot")) {
-            continue;
-          }
-          const distance = collision.source.pos.dist(collision.target.pos);
-          if (distance < closestDistance) {
-            closest = collision.target.pos;
-            closestDistance = distance;
-          }
-        }
-
-        if (closest !== undefined) {
-          target = closest;
-        }
+        const moved = k.lerp(this.pos, target, speed * k.dt());
+        const diff: Vec2 = moved.sub(this.pos);
+        this.moveBy(diff.x , diff.y)
       });
-      
-      game.onUpdate(() => {
-        this.pos = k.lerp(this.pos, target, speed * k.dt());
-      });
-    }
+    },
+    setTarget
   }
 }
 
-export const slot = (k: KaboomCtx, game: GameObj<TimerComp>): Comp => {
-  // TODO: store which grabbable is occupying
+interface SlotComp extends Comp {}
+
+export const slot = (k: KaboomCtx, game: GameObj<TimerComp>, manager: GrabbingManager): SlotComp => {
+  let grabbed: GameObj;
   return {
     id: "slot",
     require: ["pos", "area"],
     add () {
-      this.use("slot")
+      const that = this as GameObj<PosComp | AreaComp>
+
+      that.use("slot");
+
+      grabbed = undefined;
+
+      that.onCollide("grabbable", (obj: GameObj<GrabbableComp>, collision) => {
+        if (grabbed !== undefined) {
+          return;
+        }
+        obj.setTarget(that.pos);
+        grabbed = obj;
+        that.trigger("placed", obj);
+      });
+
+      that.onCollideEnd("grabbable", (obj: GameObj<GrabbableComp>) => {
+        if (grabbed !== undefined && grabbed.id === obj.id) {
+          grabbed = undefined;
+        }
+      });
     }
   }
 }

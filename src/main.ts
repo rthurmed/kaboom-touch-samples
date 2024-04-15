@@ -60,6 +60,8 @@ k.scene("grabbing", () => {
 
   addNavMenu(game, "grabbing");
 
+  const manager = createGrabbingManager();
+
   const slotPositions = [
     k.center().add(0, -300),
     k.center().add((128 + 64) * -1, -300),
@@ -68,18 +70,19 @@ k.scene("grabbing", () => {
 
   for (let i = 0; i < slotPositions.length; i++) {
     const slotPosition = slotPositions[i];
-    game.add([
+    const slotEntity = game.add([
       k.rect(80, 80),
       k.pos(slotPosition),
       k.outline(4, k.BLACK),
       k.scale(2),
       k.anchor("center"),
       k.area(),
-      slot(k, game)
+      slot(k, game, manager)
     ]);
+    slotEntity.on("placed", (obj) => {
+      k.debug.log(`placed obj ${obj.id} on slot ${slotEntity.id}`);
+    });
   }
-
-  const manager = createGrabbingManager();
 
   const entity = game.add([
     k.sprite("bean"),
